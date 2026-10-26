@@ -9,14 +9,22 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Build
+      - name: Build APK
         run: |
           set -e
+          rm -rf app build .gradle gradle
           mkdir -p app/src/main/java/com/fatafeatchef/app
           echo "include ':app'" > settings.gradle
-          echo "task clean(type: Delete){delete rootProject.buildDir}" > build.gradle
+          cat > build.gradle <<'EOF'
+          buildscript {
+            repositories { google(); mavenCentral() }
+            dependencies { classpath 'com.android.tools.build:gradle:8.2.0' }
+          }
+          allprojects { repositories { google(); mavenCentral() } }
+          task clean(type: Delete) { delete rootProject.buildDir }
+          EOF
           cat > app/build.gradle <<'EOF'
-          plugins { id 'com.android.application' }
+          apply plugin: 'com.android.application'
           android {
            namespace 'com.fatafeatchef.app'
            compileSdk 34
@@ -28,32 +36,19 @@ jobs:
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-           <application android:label="Fatafeat Chef">
-            <activity android:name=".MainActivity" android:exported="true">
-             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
-            </activity>
-           </application>
+           <application android:label="Fatafeat Chef"><activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application>
           </manifest>
           EOF
           cat > app/src/main/java/com/fatafeatchef/app/MainActivity.java <<'EOF'
           package com.fatafeatchef.app;
           import android.os.Bundle; import android.webkit.WebView; import android.webkit.WebViewClient; import androidx.appcompat.app.AppCompatActivity;
           public class MainActivity extends AppCompatActivity {
-           protected void onCreate(Bundle b){
-            super.onCreate(b);
-            WebView w=new WebView(this);
-            w.getSettings().setJavaScriptEnabled(true);
-            w.setWebViewClient(new WebViewClient());
-            w.loadUrl("https://fatafeatchef.com/");
-            setContentView(w);
-           }
+           protected void onCreate(Bundle b){ super.onCreate(b); WebView w=new WebView(this); w.getSettings().setJavaScriptEnabled(true); w.setWebViewClient(new WebViewClient()); w.loadUrl("https://fatafeatchef.com/"); setContentView(w); }
           }
           EOF
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          yes | sdkmanager --licenses || true
-          gradle wrapper --gradle-version 8.5
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          yes | sdkmanager --licenses > /dev/null || true
+          gradle assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: fatafeatchef-apk
