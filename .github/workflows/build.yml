@@ -5,42 +5,59 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
+          distribution: 'temurin'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-      - name: Build APK with Capacitor
+      - name: Build APK
         run: |
           mkdir -p app/src/main/java/com/fatafeatchef/app
           echo "include ':app'" > settings.gradle
-          echo "task clean(type: Delete) { delete rootProject.buildDir }" > build.gradle
-          printf "plugins { id 'com.android.application' }\nandroid { namespace 'com.fatafeatchef.app'; compileSdk 34; defaultConfig { applicationId \"com.fatafeatchef.app\"; minSdk 22; targetSdk 34; versionCode 1; versionName \"1.0\" } compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 } }\ndependencies {}\n" > app/build.gradle
-          mkdir -p app/src/main
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          echo "task clean(type: Delete){delete rootProject.buildDir}" > build.gradle
+          cat > app/build.gradle <<'GRD'
+          plugins { id 'com.android.application' }
+          android {
+           namespace 'com.fatafeatchef.app'
+           compileSdk 34
+           defaultConfig { applicationId "com.fatafeatchef.app"; minSdk 21; targetSdk 34; versionCode 1; versionName "1.0" }
+           compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+          }
+          dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
+          GRD
+          cat > app/src/main/AndroidManifest.xml <<'MAN'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <application android:allowBackup="true" android:label="Fatafeat Chef" android:usesCleartextTraffic="true">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
-                  </activity>
-              </application>
+           <uses-permission android:name="android.permission.INTERNET"/>
+           <application android:allowBackup="true" android:label="Fatafeat Chef">
+            <activity android:name=".MainActivity" android:exported="true">
+             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+            </activity>
+           </application>
           </manifest>
-          EOF
-          cat > app/src/main/java/com/fatafeatchef/app/MainActivity.java <<'EOF'
+          MAN
+          cat > app/src/main/java/com/fatafeatchef/app/MainActivity.java <<'JAVA'
           package com.fatafeatchef.app;
           import android.os.Bundle; import android.webkit.WebView; import android.webkit.WebViewClient; import androidx.appcompat.app.AppCompatActivity;
           public class MainActivity extends AppCompatActivity {
-            public void onCreate(Bundle b){ super.onCreate(b); WebView w=new WebView(this); w.getSettings().setJavaScriptEnabled(true); w.getSettings().setDomStorageEnabled(true); w.setWebViewClient(new WebViewClient()); w.loadUrl("https://fatafeatchef.com/"); setContentView(w); }
+           protected void onCreate(Bundle b){
+            super.onCreate(b);
+            WebView w=new WebView(this);
+            w.getSettings().setJavaScriptEnabled(true);
+            w.getSettings().setDomStorageEnabled(true);
+            w.setWebViewClient(new WebViewClient());
+            w.loadUrl("https://fatafeatchef.com/");
+            setContentView(w);
+           }
           }
-          EOF
+          JAVA
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           gradle wrapper --gradle-version 8.5
           chmod +x gradlew
           ./gradlew assembleDebug
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: fatafeatchef-apk
-          path: app/build/outputs/apk/debug/app-debug.apk        
+          path: app/build/outputs/apk/debug/app-debug.apk
